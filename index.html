@@ -1,0 +1,1009 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WarhammAR Scanner</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#1a1a1a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="WarhammAR">
+    
+    <!-- Inline Manifest -->
+    <link rel="manifest" href="data:application/json;charset=utf-8;base64,eyJuYW1lIjoiV2FyaGFtbUFSIFNjYW5uZXIiLCJzaG9ydF9uYW1lIjoiV2FyaGFtbUFSIiwiZGVzY3JpcHRpb24iOiJXYXJoYW1tZXIgTWluaWF0dXJlbiBTY2FubmVyIiwic3RhcnRfdXJsIjoiLyIsImRpc3BsYXkiOiJzdGFuZGFsb25lIiwiYmFja2dyb3VuZF9jb2xvciI6IiMxYTFhMWEiLCJ0aGVtZV9jb2xvciI6IiNlOTQ1NjAiLCJpY29ucyI6W3sic3JjIjoiZGF0YTppbWFnZS9zdmcreG1sO2Jhc2U2NCxQSE4yWnlCM2FXUjBhRDBpTVRreUlpQm9aV2xuYUhROUlURTVNaUlnZG1sbGQwSnZlRDBpTUNBd0lERTVNaUF4T1RJaVBpQmRQSEpsWTNRZ2QybGtkR2c5SWpFNU1pSWdhR1ZwWjJoMFBTSXhPVElpSUhKNFBTSXlOQ0lnWm1sc2JEMGlJMlU1TkRVMk1DSXZQand2YzNabklnNDhMejl6ZG1jK1BDOXpkbWMrIiwic2l6ZXMiOiIxOTJ4MTkyIiwidHlwZSI6ImltYWdlL3N2Zyt4bWwifSx7InNyYyI6ImRhdGE6aW1hZ2Uvc3ZnK3htbDtiYXNlNjQsUEhOMlp5QjNhV1IwYUQwaU5URXlJaUJvWldsbmFIUTlJalV4TWlJZ2RtbGxkMEp2ZUQwaU1DQXdJRFV4TWlBMU1USWlQaUJkUEhKbFkzUWdkMmxrZEdnOUlqVXhNaUlnYUdWcFoyaDBQU0kxTVRJaUlISjRQU0kyTkNJZ1ptbHNiRDBpSTJVNU5EVTJNQ0l2UGp3dmMzWm5JZzQ4TDM5emRtYytQQzl6ZG1jKyIsInNpemVzIjoiNTEyeDUxMiIsInR5cGUiOiJpbWFnZS9zdmcreG1sIn1dfQ==">
+    
+    <!-- Favicon -->
+    <link rel="icon" href="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iI2U5NDU2MCI+PHJlY3Qgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0IiByeD0iNCIvPjwvc3ZnPg==">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            color: #ffffff;
+            min-height: 100vh;
+            overflow-x: hidden;
+            padding-bottom: 80px;
+        }
+
+        .container {
+            max-width: 100%;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        /* Header Styles */
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            position: relative;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 3px;
+            background: linear-gradient(90deg, #e94560, #ff6b7d);
+            border-radius: 2px;
+        }
+
+        .logo {
+            font-size: 28px;
+            font-weight: bold;
+            color: #e94560;
+            margin: 20px 0 10px;
+            text-shadow: 0 2px 4px rgba(233, 69, 96, 0.3);
+        }
+
+        .subtitle {
+            font-size: 14px;
+            color: #888;
+            margin-bottom: 10px;
+        }
+
+        .status {
+            display: inline-block;
+            padding: 4px 12px;
+            background: rgba(233, 69, 96, 0.2);
+            border: 1px solid #e94560;
+            border-radius: 20px;
+            font-size: 12px;
+            color: #e94560;
+        }
+
+        /* Section Styles */
+        .section {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            padding: 25px;
+            margin-bottom: 25px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            display: none;
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        .section-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #e94560;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Camera Styles */
+        .camera-container {
+            position: relative;
+            width: 100%;
+            height: 300px;
+            background: #000;
+            border-radius: 15px;
+            overflow: hidden;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #e94560;
+        }
+
+        #camera-feed {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .camera-placeholder {
+            color: #666;
+            text-align: center;
+            font-size: 18px;
+        }
+
+        .scan-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 200px;
+            height: 200px;
+            border: 2px solid #e94560;
+            border-radius: 15px;
+            pointer-events: none;
+        }
+
+        .scan-overlay::before,
+        .scan-overlay::after {
+            content: '';
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            border: 3px solid #e94560;
+        }
+
+        .scan-overlay::before {
+            top: -3px;
+            left: -3px;
+            border-right: none;
+            border-bottom: none;
+        }
+
+        .scan-overlay::after {
+            bottom: -3px;
+            right: -3px;
+            border-left: none;
+            border-top: none;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #e94560, #ff6b7d);
+            color: white;
+            box-shadow: 0 4px 15px rgba(233, 69, 96, 0.3);
+        }
+
+        .btn-primary:active {
+            transform: translateY(1px);
+            box-shadow: 0 2px 10px rgba(233, 69, 96, 0.4);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-secondary:active {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .scan-animation {
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(233, 69, 96, 0.3), transparent);
+            animation: scan-sweep 2s infinite;
+        }
+
+        @keyframes scan-sweep {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+
+        /* Results */
+        .results {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .result-item {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            margin-bottom: 10px;
+            border-left: 4px solid #e94560;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .result-item:active {
+            background: rgba(255, 255, 255, 0.1);
+            transform: scale(0.98);
+        }
+
+        .result-icon {
+            width: 50px;
+            height: 50px;
+            background: #e94560;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
+            font-size: 20px;
+        }
+
+        .result-info h3 {
+            font-size: 16px;
+            margin-bottom: 5px;
+        }
+
+        .result-info p {
+            font-size: 12px;
+            color: #888;
+        }
+
+        .confidence {
+            margin-left: auto;
+            font-size: 14px;
+            font-weight: bold;
+            color: #4ade80;
+        }
+
+        /* Bottom Navigation */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(26, 26, 26, 0.95);
+            backdrop-filter: blur(20px);
+            padding: 10px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: space-around;
+            z-index: 1000;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 8px 10px;
+            color: #888;
+            font-size: 12px;
+            transition: color 0.3s ease;
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+            border-radius: 10px;
+            min-width: 60px;
+        }
+
+        .nav-item.active {
+            color: #e94560;
+            background: rgba(233, 69, 96, 0.1);
+        }
+
+        .nav-item:active {
+            transform: scale(0.95);
+        }
+
+        .nav-icon {
+            font-size: 20px;
+            margin-bottom: 4px;
+        }
+
+        /* Install Prompt */
+        .install-prompt {
+            background: rgba(233, 69, 96, 0.1);
+            border: 1px solid #e94560;
+            border-radius: 15px;
+            padding: 15px;
+            margin-bottom: 20px;
+            display: none;
+            align-items: center;
+            gap: 15px;
+            animation: slideDown 0.5s ease-out;
+        }
+
+        .install-prompt.show {
+            display: flex;
+        }
+
+        @keyframes slideDown {
+            from {
+                transform: translateY(-20px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        /* Loading */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #e94560;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Slide up animation */
+        .slide-up {
+            animation: slideUp 0.5s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(30px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        /* Success message */
+        .success-message {
+            background: rgba(74, 222, 128, 0.1);
+            border: 1px solid #4ade80;
+            color: #4ade80;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+            text-align: center;
+            animation: slideUp 0.5s ease-out;
+        }
+
+        /* Responsive */
+        @media (max-width: 480px) {
+            .container {
+                padding: 15px;
+            }
+            
+            .controls {
+                flex-direction: column;
+            }
+            
+            .btn {
+                width: 100%;
+                margin-bottom: 10px;
+                justify-content: center;
+            }
+
+            .camera-container {
+                height: 250px;
+            }
+        }
+
+        /* iOS Safari specific fixes */
+        @supports (-webkit-touch-callout: none) {
+            .camera-container {
+                -webkit-transform: translate3d(0,0,0);
+            }
+            
+            .btn {
+                -webkit-appearance: none;
+                -webkit-user-select: none;
+            }
+            
+            .bottom-nav {
+                padding-bottom: env(safe-area-inset-bottom);
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Install Prompt -->
+    <div class="install-prompt" id="install-prompt">
+        <div style="font-size: 24px;">📱</div>
+        <div style="flex: 1;">
+            <strong>App installieren</strong><br>
+            <small>Für die beste Erfahrung installiere WarhammAR auf deinem Gerät</small>
+        </div>
+        <button class="btn btn-primary" id="install-btn">Installieren</button>
+    </div>
+
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="logo">WarhammAR</div>
+            <div class="subtitle">Miniature Scanner</div>
+            <div class="status" id="status">Bereit zum Scannen</div>
+        </div>
+
+        <!-- Scanner Section -->
+        <div class="section active" id="scanner-section">
+            <div class="section-title">
+                <span>📷</span> Scanner
+            </div>
+            
+            <div class="camera-container">
+                <video id="camera-feed" style="display: none;" autoplay muted playsinline></video>
+                <div class="camera-placeholder" id="camera-placeholder">
+                    <div style="font-size: 48px; margin-bottom: 10px;">📱</div>
+                    Bereit für Kamera-Test
+                </div>
+                <div class="scan-overlay" id="scan-overlay" style="display: none;"></div>
+                <div class="scan-animation" id="scan-animation" style="display: none;"></div>
+            </div>
+
+            <div class="controls">
+                <button class="btn btn-primary" id="scan-btn">
+                    <span id="scan-btn-text">Scan starten</span>
+                    <div class="loading" id="scan-loading" style="display: none;"></div>
+                </button>
+                <button class="btn btn-secondary" id="camera-btn">📷 Kamera</button>
+                <button class="btn btn-secondary" id="gallery-btn">🖼️ Test Scan</button>
+            </div>
+
+            <div class="results" id="results" style="display: none;">
+                <h3 style="margin-bottom: 15px; color: #e94560;">Erkannte Miniaturen</h3>
+                <div id="results-list"></div>
+                <div id="success-message" style="display: none;" class="success-message">
+                    <strong>✅ Scan erfolgreich!</strong><br>
+                    Miniaturen wurden erkannt und können zur Sammlung hinzugefügt werden.
+                </div>
+            </div>
+        </div>
+
+        <!-- Info Section -->
+        <div class="section" id="info-section">
+            <div class="section-title">
+                <span>ℹ️</span> App Info
+            </div>
+            
+            <div style="background: rgba(255, 255, 255, 0.05); padding: 20px; border-radius: 15px; margin-bottom: 20px;">
+                <h3 style="color: #e94560; margin-bottom: 15px;">🎯 WarhammAR Scanner</h3>
+                <p style="color: #ccc; line-height: 1.6; margin-bottom: 15px;">
+                    Diese Progressive Web App demonstriert einen KI-basierten Scanner für Warhammer 40K Miniaturen. 
+                    Perfekt für Sammler und Spieler!
+                </p>
+                
+                <h4 style="color: #e94560; margin: 20px 0 10px;">✨ Features:</h4>
+                <ul style="color: #ccc; line-height: 1.6; margin-left: 20px;">
+                    <li>📱 Progressive Web App - Installierbar auf allen Geräten</li>
+                    <li>🤖 KI-Scanner Simulation mit realistischen Erkennungsraten</li>
+                    <li>📚 Erweiterte Warhammer 40K Datenbank</li>
+                    <li>📊 Sammlungs-Management</li>
+                    <li>🌙 Dark Theme Design</li>
+                    <li>📴 Offline-fähig</li>
+                </ul>
+
+                <h4 style="color: #e94560; margin: 20px 0 10px;">📱 Installation:</h4>
+                <ol style="color: #ccc; line-height: 1.6; margin-left: 20px;">
+                    <li>Safari öffnen (nur Safari unterstützt PWA-Installation)</li>
+                    <li>"Teilen" Button tippen (📤)</li>
+                    <li>"Zum Home-Bildschirm" wählen</li>
+                    <li>App-Name bestätigen → "Hinzufügen"</li>
+                    <li>WarhammAR läuft wie eine native App! 🚀</li>
+                </ol>
+            </div>
+
+            <div style="background: rgba(233, 69, 96, 0.1); padding: 20px; border-radius: 15px; border: 1px solid #e94560;">
+                <h4 style="color: #e94560; margin-bottom: 10px;">🔧 Entwicklung</h4>
+                <p style="color: #ccc; font-size: 14px;">
+                    Demo-Version für Konzept-Validierung. 
+                    Echte KI-Integration und Cloud-Backend in Entwicklung.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Navigation -->
+    <div class="bottom-nav">
+        <div class="nav-item active" data-section="scanner">
+            <div class="nav-icon">📷</div>
+            Scanner
+        </div>
+        <div class="nav-item" data-section="info">
+            <div class="nav-icon">ℹ️</div>
+            Info
+        </div>
+    </div>
+
+    <script>
+        // App State
+        const AppState = {
+            currentSection: 'scanner',
+            scanning: false,
+            cameraActive: false,
+            lastScan: null,
+            demoMode: true
+        };
+
+        // Sample Database
+        const warhammerDatabase = [
+            {
+                id: 1,
+                name: "Space Marine Intercessor",
+                faction: "Space Marines",
+                points: 20,
+                unit_type: "Troops",
+                confidence: 0.95
+            },
+            {
+                id: 2,
+                name: "Ork Boy",
+                faction: "Orks",
+                points: 6,
+                unit_type: "Troops", 
+                confidence: 0.87
+            },
+            {
+                id: 3,
+                name: "Necron Warrior",
+                faction: "Necrons",
+                points: 12,
+                unit_type: "Troops",
+                confidence: 0.92
+            },
+            {
+                id: 4,
+                name: "Primaris Captain",
+                faction: "Space Marines",
+                points: 90,
+                unit_type: "HQ",
+                confidence: 0.93
+            }
+        ];
+
+        // DOM Elements
+        const elements = {
+            sections: document.querySelectorAll('.section'),
+            navItems: document.querySelectorAll('.nav-item'),
+            cameraFeed: document.getElementById('camera-feed'),
+            cameraPlaceholder: document.getElementById('camera-placeholder'),
+            scanBtn: document.getElementById('scan-btn'),
+            scanBtnText: document.getElementById('scan-btn-text'),
+            scanLoading: document.getElementById('scan-loading'),
+            cameraBtn: document.getElementById('camera-btn'),
+            galleryBtn: document.getElementById('gallery-btn'),
+            scanOverlay: document.getElementById('scan-overlay'),
+            scanAnimation: document.getElementById('scan-animation'),
+            results: document.getElementById('results'),
+            resultsList: document.getElementById('results-list'),
+            status: document.getElementById('status'),
+            successMessage: document.getElementById('success-message'),
+            installPrompt: document.getElementById('install-prompt'),
+            installBtn: document.getElementById('install-btn')
+        };
+
+        // PWA Installation
+        let deferredPrompt;
+        
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            elements.installPrompt.classList.add('show');
+        });
+
+        elements.installBtn.addEventListener('click', async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                deferredPrompt = null;
+                elements.installPrompt.style.display = 'none';
+                showStatus(outcome === 'accepted' ? '✅ App installiert!' : '❌ Installation abgebrochen');
+            }
+        });
+
+        // Navigation
+        function switchSection(sectionName) {
+            elements.sections.forEach(section => {
+                section.classList.remove('active');
+            });
+            
+            document.getElementById(`${sectionName}-section`).classList.add('active');
+            
+            elements.navItems.forEach(item => {
+                item.classList.remove('active');
+            });
+            document.querySelector(`[data-section="${sectionName}"]`).classList.add('active');
+            
+            AppState.currentSection = sectionName;
+        }
+
+        elements.navItems.forEach(item => {
+            item.addEventListener('click', () => {
+                const section = item.getAttribute('data-section');
+                switchSection(section);
+            });
+        });
+
+        // Status Updates
+        function showStatus(message, duration = 3000) {
+            elements.status.textContent = message;
+            elements.status.style.animation = 'none';
+            elements.status.offsetHeight; // Trigger reflow
+            elements.status.style.animation = 'pulse 0.5s ease-out';
+        }
+
+        // Camera Functions
+        async function startCamera() {
+            try {
+                // Try to access real camera first
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { 
+                        facingMode: 'environment',
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    }
+                });
+                
+                elements.cameraFeed.srcObject = stream;
+                elements.cameraFeed.style.display = 'block';
+                elements.cameraPlaceholder.style.display = 'none';
+                elements.scanOverlay.style.display = 'block';
+                
+                AppState.cameraActive = true;
+                elements.cameraBtn.innerHTML = '📷 Stopp';
+                showStatus('📹 Echte Kamera aktiv!');
+                
+            } catch (error) {
+                console.log('Real camera not available, using simulation');
+                simulateCamera();
+            }
+        }
+
+        function simulateCamera() {
+            // Enhanced simulation
+            const canvas = document.createElement('canvas');
+            canvas.width = 640;
+            canvas.height = 480;
+            const ctx = canvas.getContext('2d');
+            
+            // Create realistic background
+            const gradient = ctx.createRadialGradient(320, 240, 50, 320, 240, 400);
+            gradient.addColorStop(0, '#444');
+            gradient.addColorStop(0.7, '#2a2a2a');
+            gradient.addColorStop(1, '#1a1a1a');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Add table surface
+            ctx.fillStyle = '#2d4a2d';
+            ctx.fillRect(0, 320, canvas.width, 160);
+            
+            // Add realistic miniature shapes
+            const miniatures = [
+                { x: 180, y: 250, w: 35, h: 70, color: '#1e40af', shadow: true },
+                { x: 250, y: 260, w: 40, h: 60, color: '#dc2626', shadow: true },
+                { x: 320, y: 240, w: 45, h: 80, color: '#059669', shadow: true },
+                { x: 390, y: 255, w: 38, h: 65, color: '#7c2d12', shadow: true }
+            ];
+            
+            miniatures.forEach(mini => {
+                // Add shadow
+                if (mini.shadow) {
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+                    ctx.fillRect(mini.x + 3, mini.y + 3, mini.w, mini.h);
+                }
+                
+                // Main body
+                ctx.fillStyle = mini.color;
+                ctx.fillRect(mini.x, mini.y, mini.w, mini.h);
+                
+                // Highlight
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+                ctx.fillRect(mini.x + 2, mini.y + 2, 8, 12);
+                
+                // Base
+                ctx.fillStyle = '#666';
+                ctx.fillRect(mini.x - 2, mini.y + mini.h - 5, mini.w + 4, 8);
+            });
+            
+            // Add UI overlay
+            ctx.fillStyle = 'rgba(233, 69, 96, 0.9)';
+            ctx.font = 'bold 16px Arial';
+            ctx.fillText('🎯 KAMERA SIMULATION', 20, 35);
+            
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+            ctx.font = '14px Arial';
+            ctx.fillText('4 Warhammer Miniaturen erkannt', 20, 60);
+            ctx.fillText('Zum Scannen "Scan starten" drücken', 20, 80);
+            
+            // Add scan grid
+            ctx.strokeStyle = 'rgba(233, 69, 96, 0.3)';
+            ctx.lineWidth = 1;
+            for (let i = 1; i < 4; i++) {
+                // Vertical lines
+                ctx.beginPath();
+                ctx.moveTo((canvas.width / 4) * i, 0);
+                ctx.lineTo((canvas.width / 4) * i, canvas.height);
+                ctx.stroke();
+                
+                // Horizontal lines
+                ctx.beginPath();
+                ctx.moveTo(0, (canvas.height / 4) * i);
+                ctx.lineTo(canvas.width, (canvas.height / 4) * i);
+                ctx.stroke();
+            }
+            
+            canvas.toBlob((blob) => {
+                const url = URL.createObjectURL(blob);
+                elements.cameraFeed.style.backgroundImage = `url(${url})`;
+                elements.cameraFeed.style.backgroundSize = 'cover';
+                elements.cameraFeed.style.backgroundPosition = 'center';
+            });
+            
+            elements.cameraFeed.style.display = 'block';
+            elements.cameraPlaceholder.style.display = 'none';
+            elements.scanOverlay.style.display = 'block';
+            
+            AppState.cameraActive = true;
+            elements.cameraBtn.innerHTML = '📷 Stopp';
+            showStatus('🎬 Simulation aktiv - Ready to scan!');
+        }
+
+        function stopCamera() {
+            if (elements.cameraFeed.srcObject) {
+                const tracks = elements.cameraFeed.srcObject.getTracks();
+                tracks.forEach(track => track.stop());
+                elements.cameraFeed.srcObject = null;
+            }
+            
+            elements.cameraFeed.style.display = 'none';
+            elements.cameraFeed.style.backgroundImage = '';
+            elements.cameraPlaceholder.style.display = 'flex';
+            elements.scanOverlay.style.display = 'none';
+            
+            AppState.cameraActive = false;
+            elements.cameraBtn.innerHTML = '📷 Kamera';
+            showStatus('📷 Kamera gestoppt');
+            elements.cameraPlaceholder.innerHTML = `
+                <div style="font-size: 48px; margin-bottom: 10px;">📱</div>
+                Kamera gestoppt<br>
+                <small style="color: #888;">Klicke "Kamera" zum Starten</small>
+            `;
+        }
+
+        // Enhanced Scan Function
+        async function performScan() {
+            if (!AppState.cameraActive) {
+                showStatus('⚠️ Bitte starte zuerst die Kamera!');
+                return;
+            }
+            
+            AppState.scanning = true;
+            elements.scanBtn.disabled = true;
+            elements.scanBtnText.style.display = 'none';
+            elements.scanLoading.style.display = 'inline-block';
+            elements.scanAnimation.style.display = 'block';
+            
+            // Haptic feedback
+            if (navigator.vibrate) {
+                navigator.vibrate([100, 50, 100]);
+            }
+            
+            // Realistic scanning steps
+            const steps = [
+                { text: '📷 Bild erfassen...', delay: 600 },
+                { text: '🧠 KI-Analyse startet...', delay: 900 },
+                { text: '🔍 Objekte erkennen...', delay: 800 },
+                { text: '📊 Warhammer DB abgleichen...', delay: 700 },
+                { text: '✅ Ergebnisse verarbeiten...', delay: 400 }
+            ];
+            
+            for (const step of steps) {
+                showStatus(step.text);
+                await new Promise(resolve => setTimeout(resolve, step.delay));
+            }
+            
+            // Generate realistic results
+            const detectedMinis = generateScanResults();
+            AppState.lastScan = detectedMinis;
+            
+            displayResults(detectedMinis);
+            
+            AppState.scanning = false;
+            elements.scanBtn.disabled = false;
+            elements.scanBtnText.style.display = 'inline';
+            elements.scanLoading.style.display = 'none';
+            elements.scanAnimation.style.display = 'none';
+            
+            const resultText = `🎯 ${detectedMinis.length} Miniatur${detectedMinis.length !== 1 ? 'en' : ''} erkannt!`;
+            showStatus(resultText);
+            
+            // Success haptic
+            if (navigator.vibrate) {
+                navigator.vibrate([200, 100, 200, 100, 200]);
+            }
+        }
+
+        function generateScanResults() {
+            const numResults = Math.floor(Math.random() * 3) + 1; // 1-3 results
+            const results = [];
+            const usedIds = new Set();
+            
+            for (let i = 0; i < numResults; i++) {
+                let unit;
+                do {
+                    unit = warhammerDatabase[Math.floor(Math.random() * warhammerDatabase.length)];
+                } while (usedIds.has(unit.id));
+                
+                usedIds.add(unit.id);
+                results.push({
+                    ...unit,
+                    confidence: 0.82 + Math.random() * 0.17, // 82-99%
+                    scanTime: new Date().toISOString()
+                });
+            }
+            
+            return results.sort((a, b) => b.confidence - a.confidence);
+        }
+
+        function displayResults(detectedMinis) {
+            if (detectedMinis.length === 0) {
+                elements.results.style.display = 'none';
+                return;
+            }
+            
+            elements.resultsList.innerHTML = '';
+            
+            detectedMinis.forEach((mini, index) => {
+                const resultItem = document.createElement('div');
+                resultItem.className = 'result-item slide-up';
+                resultItem.style.animationDelay = `${index * 0.2}s`;
+                
+                const factionEmoji = {
+                    'Space Marines': '⚔️',
+                    'Orks': '🟢',
+                    'Necrons': '💀',
+                    'T\'au Empire': '🔵'
+                }[mini.faction] || '🎯';
+                
+                resultItem.innerHTML = `
+                    <div class="result-icon">${factionEmoji}</div>
+                    <div class="result-info" style="flex: 1;">
+                        <h3>${mini.name}</h3>
+                        <p>${mini.faction} • ${mini.unit_type} • ${mini.points} Pts</p>
+                    </div>
+                    <div class="confidence">${Math.round(mini.confidence * 100)}%</div>
+                `;
+                
+                elements.resultsList.appendChild(resultItem);
+            });
+            
+            elements.results.style.display = 'block';
+            elements.successMessage.style.display = 'block';
+            
+            // Auto-scroll to results
+            setTimeout(() => {
+                elements.results.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }, 500);
+        }
+
+        // Event Listeners
+        elements.scanBtn.addEventListener('click', performScan);
+        
+        elements.cameraBtn.addEventListener('click', () => {
+            if (AppState.cameraActive) {
+                stopCamera();
+            } else {
+                startCamera();
+            }
+        });
+        
+        elements.galleryBtn.addEventListener('click', () => {
+            if (!AppState.cameraActive) {
+                startCamera();
+                setTimeout(performScan, 1000);
+            } else {
+                performScan();
+            }
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' && AppState.currentSection === 'scanner' && AppState.cameraActive && !AppState.scanning) {
+                e.preventDefault();
+                performScan();
+            }
+        });
+
+        // Handle visibility changes
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden && AppState.cameraActive) {
+                // App went to background - keep camera for demo
+                console.log('App backgrounded');
+            }
+        });
+
+        // Orientation handling
+        window.addEventListener('orientationchange', () => {
+            setTimeout(() => {
+                if (AppState.cameraActive) {
+                    showStatus('📱 Orientation changed - camera adjusting...');
+                }
+            }, 500);
+        });
+
+        // Initialize App
+        function initApp() {
+            console.log('🎯 WarhammAR PWA initializing...');
+            
+            // Auto-start demo on mobile
+            if (window.innerWidth <= 768) {
+                setTimeout(() => {
+                    startCamera();
+                }, 1500);
+            }
+            
+            // Show welcome message
+            setTimeout(() => {
+                if (AppState.currentSection === 'scanner' && !AppState.cameraActive) {
+                    showStatus('👋 Willkommen! Klicke "Kamera" zum Starten');
+                }
+            }, 2000);
+            
+            console.log('✅ WarhammAR PWA ready!');
+        }
+
+        // Start app when ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initApp);
+        } else {
+            initApp();
+        }
+
+        // Debug export
+        window.WarhammAR = {
+            state: AppState,
+            elements: elements,
+            database: warhammerDatabase
+        };
+
+    </script>
+</body>
+</html>
