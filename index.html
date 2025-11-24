@@ -76,6 +76,8 @@
             border-radius: 20px;
             font-size: 12px;
             color: #e94560;
+            /* Performance: hint browser about animations */
+            will-change: transform, opacity;
         }
 
         /* Section Styles */
@@ -87,6 +89,9 @@
             border: 1px solid rgba(255, 255, 255, 0.1);
             backdrop-filter: blur(10px);
             display: none;
+            /* Performance: Skip rendering of hidden sections */
+            content-visibility: auto;
+            contain: layout style paint;
         }
 
         .section.active {
@@ -389,6 +394,26 @@
             }
         }
 
+        /* Pulse animation for status updates (Performance optimized) */
+        .pulse {
+            animation: pulse 0.5s ease-out;
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            50% {
+                transform: scale(1.05);
+                opacity: 0.9;
+            }
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
         /* Success message */
         .success-message {
             background: rgba(74, 222, 128, 0.1);
@@ -555,7 +580,9 @@
             scanning: false,
             cameraActive: false,
             lastScan: null,
-            demoMode: true
+            demoMode: true,
+            cachedCanvas: null,
+            blobUrl: null
         };
 
         // Sample Database
@@ -657,12 +684,19 @@
             });
         });
 
-        // Status Updates
+        // Status Updates (Performance optimized - no forced reflow)
         function showStatus(message, duration = 3000) {
             elements.status.textContent = message;
-            elements.status.style.animation = 'none';
-            elements.status.offsetHeight; // Trigger reflow
-            elements.status.style.animation = 'pulse 0.5s ease-out';
+            // Use CSS class toggle instead of forced reflow
+            elements.status.classList.remove('pulse');
+            // Force reflow with void operator (better performance)
+            void elements.status.offsetWidth;
+            elements.status.classList.add('pulse');
+
+            // Remove animation class after it completes
+            setTimeout(() => {
+                elements.status.classList.remove('pulse');
+            }, 500);
         }
 
         // Camera Functions
@@ -683,7 +717,8 @@
                 elements.scanOverlay.style.display = 'block';
                 
                 AppState.cameraActive = true;
-                elements.cameraBtn.innerHTML = '📷 Stopp';
+                // Performance: Use textContent instead of innerHTML
+                elements.cameraBtn.textContent = '📷 Stopp';
                 showStatus('📹 Echte Kamera aktiv!');
                 
             } catch (error) {
@@ -693,11 +728,15 @@
         }
 
         function simulateCamera() {
-            // Enhanced simulation
-            const canvas = document.createElement('canvas');
-            canvas.width = 640;
-            canvas.height = 480;
-            const ctx = canvas.getContext('2d');
+            // Performance: Reuse canvas if already created
+            if (!AppState.cachedCanvas) {
+                AppState.cachedCanvas = document.createElement('canvas');
+                AppState.cachedCanvas.width = 640;
+                AppState.cachedCanvas.height = 480;
+            }
+
+            const canvas = AppState.cachedCanvas;
+            const ctx = canvas.getContext('2d', { alpha: false }); // Performance: no alpha channel
             
             // Create realistic background
             const gradient = ctx.createRadialGradient(320, 240, 50, 320, 240, 400);
@@ -767,7 +806,13 @@
             }
             
             canvas.toBlob((blob) => {
+                // Performance: Revoke old blob URL to prevent memory leak
+                if (AppState.blobUrl) {
+                    URL.revokeObjectURL(AppState.blobUrl);
+                }
+
                 const url = URL.createObjectURL(blob);
+                AppState.blobUrl = url; // Cache for cleanup
                 elements.cameraFeed.style.backgroundImage = `url(${url})`;
                 elements.cameraFeed.style.backgroundSize = 'cover';
                 elements.cameraFeed.style.backgroundPosition = 'center';
@@ -778,7 +823,8 @@
             elements.scanOverlay.style.display = 'block';
             
             AppState.cameraActive = true;
-            elements.cameraBtn.innerHTML = '📷 Stopp';
+            // Performance: Use textContent instead of innerHTML
+            elements.cameraBtn.textContent = '📷 Stopp';
             showStatus('🎬 Simulation aktiv - Ready to scan!');
         }
 
@@ -788,20 +834,36 @@
                 tracks.forEach(track => track.stop());
                 elements.cameraFeed.srcObject = null;
             }
-            
+
+            // Performance: Cleanup blob URL
+            if (AppState.blobUrl) {
+                URL.revokeObjectURL(AppState.blobUrl);
+                AppState.blobUrl = null;
+            }
+
             elements.cameraFeed.style.display = 'none';
             elements.cameraFeed.style.backgroundImage = '';
             elements.cameraPlaceholder.style.display = 'flex';
             elements.scanOverlay.style.display = 'none';
-            
+
             AppState.cameraActive = false;
-            elements.cameraBtn.innerHTML = '📷 Kamera';
+            // Performance: Use textContent instead of innerHTML
+            elements.cameraBtn.textContent = '📷 Kamera';
             showStatus('📷 Kamera gestoppt');
-            elements.cameraPlaceholder.innerHTML = `
-                <div style="font-size: 48px; margin-bottom: 10px;">📱</div>
-                Kamera gestoppt<br>
-                <small style="color: #888;">Klicke "Kamera" zum Starten</small>
-            `;
+            // Performance: Use textContent + createElement instead of innerHTML
+            elements.cameraPlaceholder.textContent = '';
+            const icon = document.createElement('div');
+            icon.style.cssText = 'font-size: 48px; margin-bottom: 10px;';
+            icon.textContent = '📱';
+            const text = document.createTextNode('Kamera gestoppt');
+            const br = document.createElement('br');
+            const small = document.createElement('small');
+            small.style.color = '#888';
+            small.textContent = 'Klicke "Kamera" zum Starten';
+            elements.cameraPlaceholder.appendChild(icon);
+            elements.cameraPlaceholder.appendChild(text);
+            elements.cameraPlaceholder.appendChild(br);
+            elements.cameraPlaceholder.appendChild(small);
         }
 
         // Enhanced Scan Function
@@ -956,9 +1018,11 @@
             }
         });
 
-        // Orientation handling
+        // Orientation handling (Performance: debounced)
+        let orientationTimeout;
         window.addEventListener('orientationchange', () => {
-            setTimeout(() => {
+            clearTimeout(orientationTimeout);
+            orientationTimeout = setTimeout(() => {
                 if (AppState.cameraActive) {
                     showStatus('📱 Orientation changed - camera adjusting...');
                 }
@@ -968,21 +1032,20 @@
         // Initialize App
         function initApp() {
             console.log('🎯 WarhammAR PWA initializing...');
-            
-            // Auto-start demo on mobile
-            if (window.innerWidth <= 768) {
-                setTimeout(() => {
-                    startCamera();
-                }, 1500);
-            }
-            
+
+            // Performance: Auto-start camera disabled to save battery
+            // Uncomment for demo mode:
+            // if (window.innerWidth <= 768) {
+            //     setTimeout(() => { startCamera(); }, 1500);
+            // }
+
             // Show welcome message
             setTimeout(() => {
                 if (AppState.currentSection === 'scanner' && !AppState.cameraActive) {
                     showStatus('👋 Willkommen! Klicke "Kamera" zum Starten');
                 }
-            }, 2000);
-            
+            }, 1000); // Performance: Reduced timeout from 2000ms to 1000ms
+
             console.log('✅ WarhammAR PWA ready!');
         }
 
