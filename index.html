@@ -590,14 +590,15 @@
                 </div>
             </div>
 
-            <!-- Army Lists Container -->
-            <div id="army-lists-container">
-                <div id="empty-state" style="text-align: center; padding: 40px 20px; color: #888;">
-                    <div style="font-size: 64px; margin-bottom: 15px; opacity: 0.5;">⚔️</div>
-                    <p>Noch keine Armeelisten importiert.</p>
-                    <p style="font-size: 14px; margin-top: 10px;">Lade eine JSON-Datei hoch, um loszulegen!</p>
-                </div>
+            <!-- Empty State -->
+            <div id="empty-state" style="text-align: center; padding: 40px 20px; color: #888;">
+                <div style="font-size: 64px; margin-bottom: 15px; opacity: 0.5;">⚔️</div>
+                <p>Noch keine Armeelisten importiert.</p>
+                <p style="font-size: 14px; margin-top: 10px;">Lade eine JSON-Datei hoch, um loszulegen!</p>
             </div>
+
+            <!-- Army Lists Container -->
+            <div id="army-lists-container"></div>
 
             <!-- Army Detail View (hidden by default) -->
             <div id="army-detail" style="display: none;">
@@ -993,8 +994,11 @@
 
     </script>
 
-    <!-- jsPDF Library -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- jsPDF Library (with SRI for security) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"
+            integrity="sha512-qZvrmS2ekKPF2mSznTQsxqPgnpkI4DNTlrdUmTzrDgektczlKNRRhy5X5AAOnx5S09ydFYWWNSfcEqDTTHgtNA=="
+            crossorigin="anonymous"
+            referrerpolicy="no-referrer"></script>
 
     <!-- Roster Parser & PDF Exporter -->
     <script src="js/roster-parser.js"></script>
@@ -1043,6 +1047,13 @@
             localStorage.setItem('warhammar-armies', JSON.stringify(ArmyState.armies));
         }
 
+        // HTML escape function (Security: prevent XSS)
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
         // Show error message
         function showImportError(message) {
             armyElements.importError.textContent = message;
@@ -1062,6 +1073,19 @@
             if (!file) return;
 
             try {
+                // File size validation (10 MB limit)
+                const maxSize = 10 * 1024 * 1024; // 10 MB
+                if (file.size > maxSize) {
+                    throw new Error(`Datei zu groß (${(file.size / 1024 / 1024).toFixed(2)} MB). Maximum: 10 MB`);
+                }
+
+                // File type validation
+                if (!file.name.endsWith('.json')) {
+                    throw new Error('Nur JSON-Dateien (.json) sind erlaubt');
+                }
+
+                showStatus('📂 Lade Datei...');
+
                 const text = await file.text();
                 const json = JSON.parse(text);
 
@@ -1086,6 +1110,7 @@
             } catch (error) {
                 console.error('Import failed:', error);
                 showImportError('❌ Import fehlgeschlagen: ' + error.message);
+                e.target.value = '';
             }
         });
 
@@ -1249,13 +1274,24 @@
         armyElements.exportPdfBtn.addEventListener('click', async () => {
             if (!ArmyState.currentArmy) return;
 
+            const btnText = armyElements.exportPdfBtn.innerHTML;
+
             try {
+                // Disable button and show loading
+                armyElements.exportPdfBtn.disabled = true;
+                armyElements.exportPdfBtn.innerHTML = '<span>⏳ Erstelle PDF...</span>';
                 showStatus('📄 Erstelle PDF...');
+
                 await ArmyState.exporter.exportToPDF(ArmyState.currentArmy);
+
                 showStatus('✅ PDF erfolgreich exportiert!');
             } catch (error) {
                 console.error('PDF export failed:', error);
                 showStatus('❌ PDF-Export fehlgeschlagen');
+            } finally {
+                // Re-enable button
+                armyElements.exportPdfBtn.disabled = false;
+                armyElements.exportPdfBtn.innerHTML = btnText;
             }
         });
 
