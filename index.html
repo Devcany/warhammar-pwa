@@ -554,9 +554,63 @@
             <div style="background: rgba(233, 69, 96, 0.1); padding: 20px; border-radius: 15px; border: 1px solid #e94560;">
                 <h4 style="color: #e94560; margin-bottom: 10px;">🔧 Entwicklung</h4>
                 <p style="color: #ccc; font-size: 14px;">
-                    Demo-Version für Konzept-Validierung. 
+                    Demo-Version für Konzept-Validierung.
                     Echte KI-Integration und Cloud-Backend in Entwicklung.
                 </p>
+            </div>
+        </div>
+
+        <!-- Army Lists Section -->
+        <div class="section" id="army-section">
+            <div class="section-title">
+                <span>⚔️</span> Meine Armeelisten
+            </div>
+
+            <!-- Import Area -->
+            <div style="background: rgba(255, 255, 255, 0.05); padding: 20px; border-radius: 15px; margin-bottom: 20px; border: 2px dashed rgba(233, 69, 96, 0.3);" id="import-area">
+                <div style="text-align: center; margin-bottom: 15px;">
+                    <div style="font-size: 48px; margin-bottom: 10px;">📁</div>
+                    <h3 style="color: #e94560; margin-bottom: 10px;">Army List importieren</h3>
+                    <p style="color: #ccc; font-size: 14px; margin-bottom: 15px;">
+                        Lade deine NewRecruit.eu JSON-Datei hoch
+                    </p>
+                </div>
+
+                <input type="file" id="roster-file-input" accept=".json,application/json" style="display: none;">
+
+                <button class="btn btn-primary" id="import-btn" style="width: 100%; justify-content: center;">
+                    <span>📂 JSON-Datei auswählen</span>
+                </button>
+
+                <div id="import-error" style="display: none; margin-top: 15px; padding: 15px; background: rgba(239, 68, 68, 0.1); border: 1px solid #ef4444; border-radius: 10px; color: #ef4444; font-size: 14px;">
+                </div>
+            </div>
+
+            <!-- Army Lists Container -->
+            <div id="army-lists-container">
+                <div id="empty-state" style="text-align: center; padding: 40px 20px; color: #888;">
+                    <div style="font-size: 64px; margin-bottom: 15px; opacity: 0.5;">⚔️</div>
+                    <p>Noch keine Armeelisten importiert.</p>
+                    <p style="font-size: 14px; margin-top: 10px;">Lade eine JSON-Datei hoch, um loszulegen!</p>
+                </div>
+            </div>
+
+            <!-- Army Detail View (hidden by default) -->
+            <div id="army-detail" style="display: none;">
+                <button class="btn btn-secondary" id="back-to-list-btn" style="margin-bottom: 15px;">
+                    <span>← Zurück zur Übersicht</span>
+                </button>
+
+                <div id="army-detail-content"></div>
+
+                <div class="controls" style="margin-top: 20px;">
+                    <button class="btn btn-primary" id="export-pdf-btn">
+                        <span>📄 Als PDF exportieren</span>
+                    </button>
+                    <button class="btn btn-secondary" id="delete-army-btn">
+                        <span>🗑️ Löschen</span>
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -566,6 +620,10 @@
         <div class="nav-item active" data-section="scanner">
             <div class="nav-icon">📷</div>
             Scanner
+        </div>
+        <div class="nav-item" data-section="army">
+            <div class="nav-icon">⚔️</div>
+            Armeen
         </div>
         <div class="nav-item" data-section="info">
             <div class="nav-icon">ℹ️</div>
@@ -1063,6 +1121,292 @@
             database: warhammerDatabase
         };
 
+    </script>
+
+    <!-- jsPDF Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <!-- Roster Parser & PDF Exporter -->
+    <script src="js/roster-parser.js"></script>
+    <script src="js/pdf-exporter.js"></script>
+
+    <!-- Army List Manager -->
+    <script>
+        // Army List State
+        const ArmyState = {
+            armies: [],
+            currentArmy: null,
+            parser: new RosterParser(),
+            exporter: new PDFExporter()
+        };
+
+        // Elements
+        const armyElements = {
+            importBtn: document.getElementById('import-btn'),
+            fileInput: document.getElementById('roster-file-input'),
+            importError: document.getElementById('import-error'),
+            armyListsContainer: document.getElementById('army-lists-container'),
+            emptyState: document.getElementById('empty-state'),
+            armyDetail: document.getElementById('army-detail'),
+            armyDetailContent: document.getElementById('army-detail-content'),
+            backToListBtn: document.getElementById('back-to-list-btn'),
+            exportPdfBtn: document.getElementById('export-pdf-btn'),
+            deleteArmyBtn: document.getElementById('delete-army-btn'),
+            importArea: document.getElementById('import-area')
+        };
+
+        // Load armies from localStorage
+        function loadArmies() {
+            const stored = localStorage.getItem('warhammar-armies');
+            if (stored) {
+                try {
+                    ArmyState.armies = JSON.parse(stored);
+                    renderArmyList();
+                } catch (error) {
+                    console.error('Failed to load armies:', error);
+                }
+            }
+        }
+
+        // Save armies to localStorage
+        function saveArmies() {
+            localStorage.setItem('warhammar-armies', JSON.stringify(ArmyState.armies));
+        }
+
+        // Show error message
+        function showImportError(message) {
+            armyElements.importError.textContent = message;
+            armyElements.importError.style.display = 'block';
+            setTimeout(() => {
+                armyElements.importError.style.display = 'none';
+            }, 5000);
+        }
+
+        // Import JSON file
+        armyElements.importBtn.addEventListener('click', () => {
+            armyElements.fileInput.click();
+        });
+
+        armyElements.fileInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            try {
+                const text = await file.text();
+                const json = JSON.parse(text);
+
+                // Parse roster
+                const armyData = ArmyState.parser.parse(json);
+
+                // Add to armies
+                armyData.id = Date.now();
+                armyData.importDate = new Date().toISOString();
+                ArmyState.armies.push(armyData);
+
+                // Save and update UI
+                saveArmies();
+                renderArmyList();
+
+                // Show success
+                showStatus('✅ Army List erfolgreich importiert!');
+
+                // Reset file input
+                e.target.value = '';
+
+            } catch (error) {
+                console.error('Import failed:', error);
+                showImportError('❌ Import fehlgeschlagen: ' + error.message);
+            }
+        });
+
+        // Render army list overview
+        function renderArmyList() {
+            if (ArmyState.armies.length === 0) {
+                armyElements.emptyState.style.display = 'block';
+                armyElements.importArea.style.display = 'block';
+                armyElements.armyDetail.style.display = 'none';
+                return;
+            }
+
+            armyElements.emptyState.style.display = 'none';
+
+            // Create army cards
+            const html = ArmyState.armies.map(army => `
+                <div class="unit-card" style="cursor: pointer; transition: transform 0.2s ease;" data-army-id="${army.id}">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
+                        <div>
+                            <h3 style="color: #e94560; margin-bottom: 5px;">${army.name}</h3>
+                            <p style="color: #888; font-size: 14px;">${army.faction}</p>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="font-size: 20px; font-weight: bold; color: #4ade80;">${army.points.current}</div>
+                            <div style="font-size: 12px; color: #888;">/ ${army.points.limit} pts</div>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 10px; font-size: 13px; color: #ccc;">
+                        <span>📦 ${army.units.length} Units</span>
+                        <span>•</span>
+                        <span>📅 ${new Date(army.importDate).toLocaleDateString('de-DE')}</span>
+                    </div>
+                </div>
+            `).join('');
+
+            armyElements.armyListsContainer.innerHTML = html;
+
+            // Add click handlers
+            document.querySelectorAll('[data-army-id]').forEach(card => {
+                card.addEventListener('click', () => {
+                    const armyId = parseInt(card.dataset.armyId);
+                    showArmyDetail(armyId);
+                });
+
+                // Hover effect
+                card.addEventListener('mouseenter', () => {
+                    card.style.transform = 'translateY(-2px)';
+                });
+                card.addEventListener('mouseleave', () => {
+                    card.style.transform = 'translateY(0)';
+                });
+            });
+        }
+
+        // Show army detail
+        function showArmyDetail(armyId) {
+            const army = ArmyState.armies.find(a => a.id === armyId);
+            if (!army) return;
+
+            ArmyState.currentArmy = army;
+
+            // Hide list, show detail
+            armyElements.armyListsContainer.style.display = 'none';
+            armyElements.importArea.style.display = 'none';
+            armyElements.armyDetail.style.display = 'block';
+
+            // Render detail
+            const html = `
+                <div style="background: rgba(255, 255, 255, 0.05); padding: 20px; border-radius: 15px; margin-bottom: 20px;">
+                    <h2 style="color: #e94560; margin-bottom: 10px;">${army.name}</h2>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
+                        <div>
+                            <div style="color: #ccc; font-size: 14px; margin-bottom: 5px;">${army.faction}</div>
+                            <div style="color: #888; font-size: 12px;">${army.gameSystem}</div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="font-size: 24px; font-weight: bold; color: #4ade80;">${army.points.current} pts</div>
+                            <div style="font-size: 14px; color: #888;">/ ${army.points.limit} pts</div>
+                        </div>
+                    </div>
+                </div>
+
+                ${army.rules && army.rules.length > 0 ? `
+                    <div style="background: rgba(233, 69, 96, 0.1); padding: 15px; border-radius: 12px; margin-bottom: 20px; border: 1px solid rgba(233, 69, 96, 0.3);">
+                        <h3 style="color: #e94560; margin-bottom: 10px; font-size: 16px;">📜 Army Rules</h3>
+                        ${army.rules.map(rule => `
+                            <div style="margin-bottom: 10px;">
+                                <strong style="color: #e94560;">${rule.name}</strong>
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : ''}
+
+                <h3 style="color: #e94560; margin-bottom: 15px; font-size: 18px;">Units (${army.units.length})</h3>
+
+                ${army.units.map(unit => `
+                    <div class="unit-card" style="margin-bottom: 15px;">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
+                            <h4 style="color: #fff; margin: 0;">${unit.name}</h4>
+                            <span style="color: #4ade80; font-weight: bold;">${unit.points} pts</span>
+                        </div>
+
+                        ${unit.modelCount > 1 ? `
+                            <div style="color: #888; font-size: 13px; margin-bottom: 8px;">
+                                ${unit.modelCount} models
+                            </div>
+                        ` : ''}
+
+                        ${unit.stats && Object.keys(unit.stats).length > 0 ? `
+                            <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; font-size: 13px;">
+                                ${Object.entries(unit.stats).map(([key, value]) => `
+                                    <span style="color: #ccc;"><strong style="color: #e94560;">${key}:</strong> ${value}</span>
+                                `).join('')}
+                            </div>
+                        ` : ''}
+
+                        ${unit.weapons && unit.weapons.length > 0 ? `
+                            <div style="margin-top: 12px;">
+                                <div style="color: #888; font-size: 12px; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">Weapons</div>
+                                ${unit.weapons.map(weapon => `
+                                    <div style="background: rgba(255, 255, 255, 0.03); padding: 8px; border-radius: 6px; margin-bottom: 6px; font-size: 13px;">
+                                        <div style="color: #fff; margin-bottom: 4px;">⚔️ ${weapon.name}</div>
+                                        <div style="color: #888; font-size: 12px;">
+                                            ${weapon.type === 'ranged' ?
+                                                `Range: ${weapon.Range || '-'} • A: ${weapon.A || '-'} • BS: ${weapon.BS || '-'} • S: ${weapon.S || '-'} • AP: ${weapon.AP || '-'} • D: ${weapon.D || '-'}` :
+                                                `Melee • A: ${weapon.A || '-'} • WS: ${weapon.WS || '-'} • S: ${weapon.S || '-'} • AP: ${weapon.AP || '-'} • D: ${weapon.D || '-'}`
+                                            }
+                                            ${weapon.Keywords ? `<br>[${weapon.Keywords}]` : ''}
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        ` : ''}
+
+                        ${unit.abilities && unit.abilities.length > 0 ? `
+                            <div style="margin-top: 12px;">
+                                <div style="color: #888; font-size: 12px; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">Abilities</div>
+                                ${unit.abilities.map(ability => `
+                                    <div style="color: #ccc; font-size: 13px; margin-bottom: 4px;">
+                                        <strong style="color: #e94560;">•</strong> ${ability.name}
+                                    </div>
+                                `).join('')}
+                            </div>
+                        ` : ''}
+                    </div>
+                `).join('')}
+            `;
+
+            armyElements.armyDetailContent.innerHTML = html;
+        }
+
+        // Back to list
+        armyElements.backToListBtn.addEventListener('click', () => {
+            ArmyState.currentArmy = null;
+            armyElements.armyDetail.style.display = 'none';
+            armyElements.armyListsContainer.style.display = 'block';
+            armyElements.importArea.style.display = 'block';
+        });
+
+        // Export PDF
+        armyElements.exportPdfBtn.addEventListener('click', async () => {
+            if (!ArmyState.currentArmy) return;
+
+            try {
+                showStatus('📄 Erstelle PDF...');
+                await ArmyState.exporter.exportToPDF(ArmyState.currentArmy);
+                showStatus('✅ PDF erfolgreich exportiert!');
+            } catch (error) {
+                console.error('PDF export failed:', error);
+                showStatus('❌ PDF-Export fehlgeschlagen');
+            }
+        });
+
+        // Delete army
+        armyElements.deleteArmyBtn.addEventListener('click', () => {
+            if (!ArmyState.currentArmy) return;
+
+            if (confirm(`"${ArmyState.currentArmy.name}" wirklich löschen?`)) {
+                ArmyState.armies = ArmyState.armies.filter(a => a.id !== ArmyState.currentArmy.id);
+                saveArmies();
+                ArmyState.currentArmy = null;
+                armyElements.armyDetail.style.display = 'none';
+                armyElements.armyListsContainer.style.display = 'block';
+                armyElements.importArea.style.display = 'block';
+                renderArmyList();
+                showStatus('✅ Army List gelöscht');
+            }
+        });
+
+        // Initialize army lists on app start
+        loadArmies();
     </script>
 </body>
 </html>
